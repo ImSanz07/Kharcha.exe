@@ -1,0 +1,4 @@
+SMS ingestion needs work before it can be relied on: the generic rule has no match conditions, so it matches any SMS the SBI rule doesn’t match. It produces no amount, but the bulk-save service requires one; that can make ingestion fail.
+The parser outputs transaction types as debit/credit, while the transaction model defines expense/income. These values currently don’t align.
+The SMS filter removes items from the list while iterating over it, which can skip messages. The reported received count may therefore not represent the original request.
+Automated tests are not meaningfully implemented yet: the transaction and account test files contain only Django’s empty test scaffolding. See transactions/tests.py and accounts/tests.py.

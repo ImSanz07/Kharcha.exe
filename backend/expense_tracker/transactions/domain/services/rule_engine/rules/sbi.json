@@ -1,0 +1,16 @@
+{
+    "bank": "SBI",
+    "priority": 1,
+    "match": {
+        "contains": [
+            "SBI"
+        ]
+    },
+    "fields": {
+        "amount": "debited by\\s+(?:Rs\\.?|₹)?\\s*([\\d,]+\\.?\\d*)",
+        "merchant": "trf to\\s+(.+?)\\s+Refno",
+        "type": "\\b(debited|credited)\\b",
+        "date": "on date\\s+(\\d{2})([A-Za-z]{3})(\\d{2})",
+        "reference_number": "Refno\\s+([A-Za-z0-9]+)"
+    }
+}

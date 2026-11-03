@@ -1,0 +1,8 @@
+{
+    "bank": "GENERIC",
+    "priority": 999,
+    "match": {
+        "contains": []
+    },
+    "fields": {}
+}
