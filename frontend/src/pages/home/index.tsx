@@ -1,4 +1,5 @@
-import { RefreshCw, AlertCircle, Landmark } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { RefreshCw, AlertCircle, Landmark, Plus } from "lucide-react";
 import { useTransactions } from "../../hooks/useTransactions";
 import {
   getBalance,
@@ -11,6 +12,8 @@ import TopCategories from "../../components/home/TopCategories";
 import TransactionTable from "../../components/home/TransactionTable";
 import "../../styles/dashboard.css";
 import LoadingScreen from "../../components/home/LoadingScreen";
+import AddTransactionModal from "../../components/home/AddTransactionModal";
+import type { NewTransactionType } from "../../utils/transactions/api";
 
 // Hardcoded for now — swap with auth context later
 // const AUTH_TOKEN = "722f973950bc6a01b1b1bd510c81a3b16b24c303";
@@ -23,8 +26,20 @@ interface HomeProps {
 const Home = ({ token }: HomeProps) => {
   const { transactions, loading, error, refetch } = useTransactions(token);
 
-  // Home.tsx
-  if (loading) return <LoadingScreen />;
+  const [modalType, setModalType] = useState<NewTransactionType | null>(null);
+
+  // Full-screen loader only for the very first load; later refetches keep the page mounted
+  const [hasLoaded, setHasLoaded] = useState(false);
+  useEffect(() => {
+    if (!loading) setHasLoaded(true);
+  }, [loading]);
+
+  const existingCategories = useMemo(
+    () => Array.from(new Set(transactions.map((t) => t.category_name))),
+    [transactions],
+  );
+
+  if (loading && !hasLoaded) return <LoadingScreen />;
 
   const balance = getBalance(transactions);
   const totalDebits = getTotalDebits(transactions);
@@ -46,10 +61,16 @@ const Home = ({ token }: HomeProps) => {
             <p className="brand-sub">Personal Finance Dashboard</p>
           </div>
         </div>
-        <button className="refresh-btn" onClick={refetch} disabled={loading}>
-          <RefreshCw size={14} className={loading ? "spin" : ""} />
-          <span>{loading ? "Loading..." : "Refresh"}</span>
-        </button>
+        <div className="header-actions">
+          <button className="add-btn-desktop" onClick={() => setModalType("expense")}>
+            <Plus size={14} />
+            <span>Add transaction</span>
+          </button>
+          <button className="refresh-btn" onClick={refetch} disabled={loading}>
+            <RefreshCw size={14} className={loading ? "spin" : ""} />
+            <span>{loading ? "Loading..." : "Refresh"}</span>
+          </button>
+        </div>
       </header>
 
       {/* Error */}
@@ -76,6 +97,25 @@ const Home = ({ token }: HomeProps) => {
 
       {/* Full table */}
       <TransactionTable transactions={transactions} />
+
+      {/* Mobile floating action button */}
+      <button
+        className="fab"
+        onClick={() => setModalType("expense")}
+        aria-label="Add transaction"
+      >
+        <Plus size={24} />
+      </button>
+
+      {modalType && (
+        <AddTransactionModal
+          token={token}
+          initialType={modalType}
+          existingCategories={existingCategories}
+          onClose={() => setModalType(null)}
+          onCreated={refetch}
+        />
+      )}
     </div>
   );
 };

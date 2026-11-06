@@ -72,7 +72,9 @@ const TransactionTable = ({ transactions }: TransactionTableProps) => {
             <div className="tx-meta">
               <span className="tx-category">{t.category_name}</span>
               <span className="tx-date">
-                {formatDate(t.created_at)} · {formatTime(t.created_at)}
+                {t.transaction_date
+                  ? formatDate(`${t.transaction_date}T00:00:00`)
+                  : `${formatDate(t.created_at)} · ${formatTime(t.created_at)}`}
               </span>
             </div>
             <div className="tx-right">
