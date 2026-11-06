@@ -12,3 +12,16 @@
      scrollbar-width: none;
      /* Firefox */
  }
+
+/*
+  iOS Safari zooms the page when a focused input has a font size below 16px.
+  The login and register pages autofocus the username field, so the zoom
+  happened on page load. Keep inputs at 16px on touch devices.
+*/
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
