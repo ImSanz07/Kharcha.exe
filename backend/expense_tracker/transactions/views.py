@@ -8,7 +8,8 @@ from django.shortcuts import get_object_or_404
 from .domain.services.rule_engine.engine import SmsParserRuleEngine
 from .domain.services.transaction_service import Transaction_Service
 from .domain.models.transaction import Transaction
-from .serializers import TransactionSerializer
+from .serializers import TransactionSerializer, BalanceCheckpointSerializer
+from .domain.services.balance_service import Balance_Service
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 ##View class is suppoes to handle HTTP requests, process and return responses
@@ -101,4 +102,60 @@ class TransactionDetailView(generics.GenericAPIView):
     def delete(self, request, pk):
         transaction = self.get_manual_transaction(pk)
         transaction.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class BalanceCheckpointListCreateView(generics.GenericAPIView):
+    """
+    GET  /api/balance-checkpoints/  list the user's balance pins
+    POST /api/balance-checkpoints/  add a pin
+    """
+    serializer_class = BalanceCheckpointSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Balance_Service.get_checkpoints(self.request.user)
+
+    def get(self, request):
+        serializer = self.serializer_class(self.get_queryset(), many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = self.serializer_class(
+            data=request.data, context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        checkpoint = serializer.save()
+        return Response(
+            self.serializer_class(checkpoint).data,
+            status=status.HTTP_201_CREATED
+        )
+
+
+class BalanceCheckpointDetailView(generics.GenericAPIView):
+    """
+    PATCH  /api/balance-checkpoints/<id>/  change amount and or position
+    DELETE /api/balance-checkpoints/<id>/  remove the pin
+    """
+    serializer_class = BalanceCheckpointSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Balance_Service.get_checkpoints(self.request.user)
+
+    def patch(self, request, pk):
+        checkpoint = get_object_or_404(self.get_queryset(), pk=pk)
+        serializer = self.serializer_class(
+            checkpoint, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        checkpoint = serializer.save()
+        return Response(
+            self.serializer_class(checkpoint).data,
+            status=status.HTTP_200_OK
+        )
+
+    def delete(self, request, pk):
+        checkpoint = get_object_or_404(self.get_queryset(), pk=pk)
+        checkpoint.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
