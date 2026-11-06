@@ -1,7 +1,7 @@
 import type { AuthResponse, LoginPayload, RegisterPayload } from "../../types/auth";
 
-
-const BASE = "http://localhost:8000/api/auth";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE = `${API_BASE_URL}/api/auth`;
 
 export const loginApi = async (payload: LoginPayload): Promise<AuthResponse> => {
     const res = await fetch(`${BASE}/login`, {
