@@ -109,7 +109,7 @@ DATABASES = {
     #     "PORT": env("DB_PORT"),
     # }
     "default": dj_database_url.config(
-        default=env('RENDER_DB_URL'),
+        default=env('DATABASE_URL'),
         conn_max_age=600
     )
 }
@@ -123,9 +123,6 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
 }
-
-DATABASE_URL = os.getenv("DATABASE_URL")
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
