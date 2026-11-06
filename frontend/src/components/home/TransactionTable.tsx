@@ -1,13 +1,14 @@
 import { useState } from "react";
 import type { Transaction } from "../../types/transaction";
 import { formatCurrency, formatDate, formatTime } from "../../utils/home/Calculations";
-import { ArrowDownRight, ArrowUpRight, Search } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Pencil, Search } from "lucide-react";
 
 interface TransactionTableProps {
   transactions: Transaction[];
+  onEdit: (transaction: Transaction) => void;
 }
 
-const TransactionTable = ({ transactions }: TransactionTableProps) => {
+const TransactionTable = ({ transactions, onEdit }: TransactionTableProps) => {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "debit" | "credit">("all");
 
@@ -51,8 +52,25 @@ const TransactionTable = ({ transactions }: TransactionTableProps) => {
         {filtered.length === 0 && (
           <p className="tx-empty">No transactions found.</p>
         )}
-        {filtered.map((t) => (
-          <div key={t.transaction_id} className="tx-row">
+        {filtered.map((t) => {
+          const editable = t.source === "MANUAL";
+          return (
+          <div
+            key={t.transaction_id}
+            className={`tx-row ${editable ? "tx-row-editable" : ""}`}
+            {...(editable && {
+              role: "button",
+              tabIndex: 0,
+              "aria-label": `Edit ${t.category_name} transaction`,
+              onClick: () => onEdit(t),
+              onKeyDown: (e: React.KeyboardEvent) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onEdit(t);
+                }
+              },
+            })}
+          >
             <div
               className="tx-icon"
               style={{
@@ -88,10 +106,14 @@ const TransactionTable = ({ transactions }: TransactionTableProps) => {
                 {t.transaction_type === "debit" ? "−" : "+"}
                 {formatCurrency(parseFloat(t.amount))}
               </span>
-              <span className="tx-id">#{t.transaction_id}</span>
+              <span className="tx-id">
+                {editable ? <Pencil size={11} /> : <span className="tx-tag">SMS</span>}
+                #{t.transaction_id}
+              </span>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

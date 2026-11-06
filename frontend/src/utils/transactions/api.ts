@@ -8,6 +8,7 @@ export interface NewTransactionPayload {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, "");
+const TRANSACTIONS_URL = `${API_BASE_URL}/api/transactions/`;
 
 /** Flattens DRF's { field: ["msg"] } error shape into one readable string. */
 const extractError = (body: unknown): string => {
@@ -21,17 +22,19 @@ const extractError = (body: unknown): string => {
   return "Could not save the transaction.";
 };
 
-export const createTransaction = async (
+const request = async (
   token: string,
-  payload: NewTransactionPayload,
+  url: string,
+  method: "POST" | "PATCH" | "DELETE",
+  payload?: NewTransactionPayload,
 ): Promise<void> => {
-  const res = await fetch(`${API_BASE_URL}/api/transactions/`, {
-    method: "POST",
+  const res = await fetch(url, {
+    method,
     headers: {
       Authorization: `Token ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(payload),
+    body: payload ? JSON.stringify(payload) : undefined,
   });
 
   if (!res.ok) {
@@ -39,3 +42,15 @@ export const createTransaction = async (
     throw new Error(extractError(body));
   }
 };
+
+export const createTransaction = (token: string, payload: NewTransactionPayload) =>
+  request(token, TRANSACTIONS_URL, "POST", payload);
+
+export const updateTransaction = (
+  token: string,
+  id: number,
+  payload: NewTransactionPayload,
+) => request(token, `${TRANSACTIONS_URL}${id}/`, "PATCH", payload);
+
+export const deleteTransaction = (token: string, id: number) =>
+  request(token, `${TRANSACTIONS_URL}${id}/`, "DELETE");
