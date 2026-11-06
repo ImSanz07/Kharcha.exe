@@ -3,12 +3,12 @@ import type { Transaction } from "../../types/transaction";
 
 export const getTotalDebits = (transactions: Transaction[]): number =>
   transactions
-    .filter((t) => t.transaction_type === "expense")
+    .filter((t) => t.transaction_type === "debit")
     .reduce((sum, t) => sum + parseFloat(t.amount), 0);
 
 export const getTotalCredits = (transactions: Transaction[]): number =>
   transactions
-    .filter((t) => t.transaction_type === "income")
+    .filter((t) => t.transaction_type === "credit")
     .reduce((sum, t) => sum + parseFloat(t.amount), 0);
 
 export const getBalance = (transactions: Transaction[]): number =>
@@ -33,7 +33,7 @@ export const getTopCategories = (
 ): { name: string; total: number; count: number }[] => {
   const map: Record<string, { total: number; count: number }> = {};
   transactions
-    .filter((t) => t.transaction_type === "expense")
+    .filter((t) => t.transaction_type === "debit")
     .forEach((t) => {
       const name = t.category_name;
       if (!map[name]) map[name] = { total: 0, count: 0 };
@@ -52,7 +52,7 @@ export const getDailySpend = (
 ): { date: string; amount: number }[] => {
   const map: Record<string, number> = {};
   transactions
-    .filter((t) => t.transaction_type === "expense")
+    .filter((t) => t.transaction_type === "debit")
     .forEach((t) => {
       const date = t.created_at.split("T")[0];
       map[date] = (map[date] || 0) + parseFloat(t.amount);

@@ -1,5 +1,5 @@
 import { getDailySpend } from "../../utils/home/Calculations";
-import { Transaction } from "../../types/transaction";
+import type { Transaction } from "../../types/transaction";
 
 interface SpendChartProps {
   transactions: Transaction[];

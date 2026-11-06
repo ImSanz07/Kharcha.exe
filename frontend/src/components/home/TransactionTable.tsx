@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Transaction } from "../../types/transaction";
+import type { Transaction } from "../../types/transaction";
 import { formatCurrency, formatDate, formatTime } from "../../utils/home/Calculations";
 import { ArrowDownRight, ArrowUpRight, Search } from "lucide-react";
 
@@ -57,13 +57,13 @@ const TransactionTable = ({ transactions }: TransactionTableProps) => {
               className="tx-icon"
               style={{
                 background:
-                  t.transaction_type === "expense" ? "#f8717118" : "#34d39918",
+                  t.transaction_type === "debit" ? "#f8717118" : "#34d39918",
                 border: `1px solid ${
-                  t.transaction_type === "expense" ? "#f8717130" : "#34d39930"
+                  t.transaction_type === "debit" ? "#f8717130" : "#34d39930"
                 }`,
               }}
             >
-              {t.transaction_type === "expense" ? (
+              {t.transaction_type === "debit" ? (
                 <ArrowDownRight size={14} color="#f87171" />
               ) : (
                 <ArrowUpRight size={14} color="#34d399" />
@@ -80,10 +80,10 @@ const TransactionTable = ({ transactions }: TransactionTableProps) => {
                 className="tx-amount"
                 style={{
                   color:
-                    t.transaction_type === "expense" ? "#f87171" : "#34d399",
+                    t.transaction_type === "debit" ? "#f87171" : "#34d399",
                 }}
               >
-                {t.transaction_type === "expense" ? "−" : "+"}
+                {t.transaction_type === "debit" ? "−" : "+"}
                 {formatCurrency(parseFloat(t.amount))}
               </span>
               <span className="tx-id">#{t.transaction_id}</span>

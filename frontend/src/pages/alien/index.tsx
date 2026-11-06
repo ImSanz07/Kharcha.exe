@@ -1,18 +1,15 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Plus,
   Minus,
   TrendingUp,
   TrendingDown,
-  Wallet,
   Coffee,
   Car,
   Home,
   ShoppingBag,
   Heart,
   Zap,
-  ArrowUpRight,
-  ArrowDownLeft,
   AlertTriangle,
 } from "lucide-react";
 
@@ -62,7 +59,12 @@ const AlienExpenseTracker = () => {
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [systemTime, setSystemTime] = useState(new Date());
-  const [blinkingElements, setBlinkingElements] = useState({});
+  const [blinkingElements, setBlinkingElements] = useState({
+    status1: false,
+    status2: false,
+    status3: false,
+    warning: false,
+  });
   const [newTransaction, setNewTransaction] = useState({
     amount: "",
     category: "Food",
@@ -131,11 +133,11 @@ const AlienExpenseTracker = () => {
     setShowAddForm(false);
   };
 
-  const formatTime = (date) => {
+  const formatTime = (date: Date) => {
     return date.toISOString().slice(11, 19);
   };
 
-  const formatDate = (date) => {
+  const formatDate = (date: Date) => {
     return date.toISOString().slice(0, 10).replace(/-/g, ".");
   };
 
@@ -306,9 +308,11 @@ const AlienExpenseTracker = () => {
           </div>
 
           <div className="max-h-80 overflow-y-auto">
-            {expenses.slice(0, 15).map((expense, index) => {
-              const CategoryIcon = categories[expense.category]?.icon || Coffee;
-              const categoryCode = categories[expense.category]?.code || "UNKN";
+            {expenses.slice(0, 15).map((expense) => {
+              const category = categories[expense.category as keyof typeof categories];
+
+              const CategoryIcon = category?.icon || Coffee;
+              const categoryCode = category?.code || "UNKN";
 
               return (
                 <div
@@ -415,7 +419,7 @@ const AlienExpenseTracker = () => {
                     {Object.keys(categories)
                       .filter(
                         (cat) =>
-                          cat !== "Income" || newTransaction.type === "income"
+                          cat !== "Income" || newTransaction.type === "income",
                       )
                       .map((category) => (
                         <option
@@ -461,7 +465,7 @@ const AlienExpenseTracker = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         @keyframes scan-line {
           0% {
             transform: translateY(-100vh);

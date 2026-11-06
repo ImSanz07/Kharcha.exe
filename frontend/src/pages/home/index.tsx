@@ -30,7 +30,7 @@ const Home = ({ token }: HomeProps) => {
   const totalDebits = getTotalDebits(transactions);
   const totalCredits = getTotalCredits(transactions);
   const debitCount = transactions.filter(
-    (t) => t.transaction_type === "expense",
+    (t) => t.transaction_type === "debit",
   ).length;
 
   return (
@@ -78,6 +78,6 @@ const Home = ({ token }: HomeProps) => {
       <TransactionTable transactions={transactions} />
     </div>
   );
-};;
+};
 
 export default Home;

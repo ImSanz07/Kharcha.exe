@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Eye, EyeOff, UserPlus, Landmark } from "lucide-react";
-import { registerApi, saveToken } from "../../utils/auth/auth";
+import { registerApi } from "../../utils/auth/auth";
 import "../../styles/auth.css";
 
 interface RegisterProps {
@@ -8,7 +8,7 @@ interface RegisterProps {
   onGoLogin: () => void;
 }
 
-const Register = ({ onSuccess, onGoLogin }: RegisterProps) => {
+const Register = ({ onGoLogin }: RegisterProps) => {
   const [form, setForm] = useState({ username: "", email: "", password: "" });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
