@@ -913,3 +913,384 @@ body {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* ── Balance pins ── */
+.table-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid #818cf855;
+  background: #818cf812;
+  color: var(--indigo);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pin-btn:hover {
+  background: #818cf822;
+}
+
+.balance-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px dashed #818cf855;
+  background: #818cf80d;
+  font-size: 12px;
+  color: var(--muted2);
+}
+
+/* Marker inside the transaction list: "your balance was X right here" */
+.cp-marker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
+  padding: 18px 20px 22px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(90deg, transparent, #818cf810 50%, transparent);
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cp-marker:focus-visible {
+  outline: 2px solid var(--indigo);
+  outline-offset: -2px;
+}
+
+.cp-line {
+  flex: 1;
+  height: 0;
+  border-top: 1.5px dashed #818cf860;
+}
+
+.cp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 14px 6px 7px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1b2342, var(--surface2));
+  border: 1px solid #818cf855;
+  box-shadow: 0 0 0 4px #818cf810, 0 6px 18px #818cf822;
+}
+
+.cp-pin {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--indigo);
+  color: #0b1020;
+  transform: rotate(35deg);
+}
+
+.cp-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.cp-kicker {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted2);
+}
+
+.cp-amount {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.cp-negative {
+  color: var(--red);
+}
+
+.cp-caption {
+  flex-basis: 100%;
+  text-align: center;
+  margin-top: -4px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+/* The newest pin glows and ripples; older pins are quieter */
+.cp-marker:not(.cp-marker-anchor) .cp-badge {
+  box-shadow: none;
+  opacity: 0.8;
+}
+
+.cp-marker-anchor .cp-pin::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--indigo);
+  animation: cp-ripple 2.4s ease-out infinite;
+}
+
+.cp-marker-anchor .cp-line {
+  background: repeating-linear-gradient(90deg, #818cf8 0 6px, transparent 6px 12px);
+  border-top: none;
+  height: 1.5px;
+  background-size: 24px 1.5px;
+  animation: cp-flow 1.2s linear infinite;
+}
+
+@keyframes cp-ripple {
+  from { transform: scale(1); opacity: 0.7; }
+  to   { transform: scale(2.2); opacity: 0; }
+}
+
+@keyframes cp-flow {
+  to { background-position: 24px 0; }
+}
+
+/* History older than the newest pin is already inside the pinned balance */
+.tx-row-settled {
+  opacity: 0.55;
+}
+
+/* Balance popup: pick a gap in the history */
+.modal-help {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted2);
+  margin-bottom: 4px;
+}
+
+.amount-row {
+  display: flex;
+  gap: 8px;
+}
+
+.amount-row .form-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.neg-toggle {
+  flex-shrink: 0;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--muted2);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.neg-toggle-on {
+  border-color: var(--red);
+  color: var(--red);
+  background: #f8717112;
+}
+
+.slot-list {
+  max-height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  background: var(--surface2);
+  padding: 2px 0;
+}
+
+.slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.slot-line {
+  flex: 1;
+  border-top: 1.5px dashed var(--border2);
+}
+
+.slot:hover .slot-line,
+.slot:focus-visible .slot-line {
+  border-top-color: #818cf880;
+}
+
+.slot-selected {
+  min-height: 46px;
+  background: #818cf810;
+}
+
+.slot-selected .slot-line {
+  border-top-color: #818cf8aa;
+}
+
+.slot-pin {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--indigo);
+  color: #0b1020;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: 0 4px 14px #818cf844;
+  max-width: 70%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot-txn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  font-size: 12px;
+  color: var(--muted2);
+}
+
+.slot-txn-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  text-transform: capitalize;
+}
+
+.slot-txn-date {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.slot-pos { color: var(--green); font-family: var(--font-mono); }
+.slot-neg { color: var(--red); font-family: var(--font-mono); }
+
+.slot-empty {
+  padding: 4px 14px 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.submit-pin {
+  background: var(--indigo);
+  text-transform: none;
+}
+
+/* First run: required starting balance */
+.onboard-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.onboard-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 18px;
+  padding: 28px 22px 22px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.onboard-pin {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #818cf812;
+  border: 1px solid #818cf840;
+  color: var(--indigo);
+  margin-bottom: 16px;
+  transform: rotate(-8deg);
+}
+
+.onboard-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.onboard-sub {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted2);
+  margin-bottom: 8px;
+}
+
+.onboard-note {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+@media (max-width: 560px) {
+  .balance-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cp-marker {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-marker-anchor .cp-pin::after,
+  .cp-marker-anchor .cp-line {
+    animation: none;
+  }
+}

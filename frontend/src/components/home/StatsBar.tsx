@@ -6,6 +6,8 @@ interface StatsBarProps {
   totalDebits: number;
   totalCredits: number;
   txCount: number;
+  /** Small text under the balance, e.g. when it was last pinned. */
+  balanceNote?: string;
 }
 
 const StatCard = ({
@@ -33,14 +35,14 @@ const StatCard = ({
   </div>
 );
 
-const StatsBar = ({ balance, totalDebits, totalCredits, txCount }: StatsBarProps) => (
+const StatsBar = ({ balance, totalDebits, totalCredits, txCount, balanceNote }: StatsBarProps) => (
   <div className="stats-bar">
     <StatCard
       label="Net Balance"
-      value={formatCurrency(Math.abs(balance))}
+      value={`${balance < 0 ? "−" : ""}${formatCurrency(Math.abs(balance))}`}
       icon={Wallet}
       accent={balance >= 0 ? "#34d399" : "#f87171"}
-      sub={balance >= 0 ? "surplus" : "deficit"}
+      sub={balanceNote ?? (balance >= 0 ? "surplus" : "deficit")}
     />
     <StatCard
       label="Total Debited"

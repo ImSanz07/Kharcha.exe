@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw, AlertCircle, Landmark, Plus } from "lucide-react";
+import { RefreshCw, AlertCircle, Landmark, Pin, Plus } from "lucide-react";
 import { useTransactions } from "../../hooks/useTransactions";
+import { useBalanceCheckpoints } from "../../hooks/useBalanceCheckpoints";
+import { getAnchoredBalance } from "../../utils/balance/timeline";
+import type { BalanceCheckpoint } from "../../types/balance";
 import {
-  getBalance,
+  formatDate,
   getTotalDebits,
   getTotalCredits,
 } from "../../utils/home/Calculations";
@@ -13,6 +16,8 @@ import TransactionTable from "../../components/home/TransactionTable";
 import "../../styles/dashboard.css";
 import LoadingScreen from "../../components/home/LoadingScreen";
 import TransactionModal from "../../components/home/TransactionModal";
+import BalanceModal from "../../components/home/BalanceModal";
+import OnboardingBalance from "../../components/home/OnboardingBalance";
 import type { Transaction } from "../../types/transaction";
 import type { NewTransactionType } from "../../utils/transactions/api";
 
@@ -26,24 +31,41 @@ interface HomeProps {
 
 const Home = ({ token }: HomeProps) => {
   const { transactions, loading, error, refetch } = useTransactions(token);
+  const cp = useBalanceCheckpoints(token);
 
   const [modalType, setModalType] = useState<NewTransactionType | null>(null);
   const [editing, setEditing] = useState<Transaction | null>(null);
+  // "new" opens the pin popup empty, a checkpoint opens it for editing
+  const [pinModal, setPinModal] = useState<"new" | BalanceCheckpoint | null>(null);
 
   // Full-screen loader only for the very first load; later refetches keep the page mounted
   const [hasLoaded, setHasLoaded] = useState(false);
+  const busy = loading || cp.loading;
   useEffect(() => {
-    if (!loading) setHasLoaded(true);
-  }, [loading]);
+    if (!busy) setHasLoaded(true);
+  }, [busy]);
 
   const existingCategories = useMemo(
     () => Array.from(new Set(transactions.map((t) => t.category_name))),
     [transactions],
   );
 
-  if (loading && !hasLoaded) return <LoadingScreen />;
+  if (busy && !hasLoaded) return <LoadingScreen />;
 
-  const balance = getBalance(transactions);
+  const refetchAll = () => {
+    refetch();
+    cp.refetch();
+  };
+
+  // A brand new account must set a starting balance before anything else.
+  // Skipped if either request failed, so an outage can never trap the user here.
+  const isFreshAccount =
+    !error && !cp.error && transactions.length === 0 && cp.checkpoints.length === 0;
+  if (isFreshAccount) return <OnboardingBalance token={token} onDone={refetchAll} />;
+
+  const missingBalance = !cp.error && cp.checkpoints.length === 0;
+
+  const { balance, anchor } = getAnchoredBalance(transactions, cp.checkpoints);
   const totalDebits = getTotalDebits(transactions);
   const totalCredits = getTotalCredits(transactions);
   const debitCount = transactions.filter(
@@ -68,18 +90,28 @@ const Home = ({ token }: HomeProps) => {
             <Plus size={14} />
             <span>Add transaction</span>
           </button>
-          <button className="refresh-btn" onClick={refetch} disabled={loading}>
-            <RefreshCw size={14} className={loading ? "spin" : ""} />
-            <span>{loading ? "Loading..." : "Refresh"}</span>
+          <button className="refresh-btn" onClick={refetchAll} disabled={busy}>
+            <RefreshCw size={14} className={busy ? "spin" : ""} />
+            <span>{busy ? "Loading..." : "Refresh"}</span>
           </button>
         </div>
       </header>
 
       {/* Error */}
-      {error && (
+      {(error || cp.error) && (
         <div className="error-bar">
           <AlertCircle size={14} />
-          <span>Failed to load: {error}</span>
+          <span>Failed to load: {error ?? cp.error}</span>
+        </div>
+      )}
+
+      {missingBalance && (
+        <div className="balance-banner">
+          <span>Your balance isn&apos;t set, so the total below only reflects these transactions.</span>
+          <button type="button" className="pin-btn" onClick={() => setPinModal("new")}>
+            <Pin size={12} />
+            <span>Set balance</span>
+          </button>
         </div>
       )}
 
@@ -89,6 +121,11 @@ const Home = ({ token }: HomeProps) => {
         totalDebits={totalDebits}
         totalCredits={totalCredits}
         txCount={debitCount}
+        balanceNote={
+          anchor
+            ? `pinned ${formatDate(`${anchor.as_of_date}T00:00:00`)}`
+            : "balance not set"
+        }
       />
 
       {/* Charts row */}
@@ -98,7 +135,13 @@ const Home = ({ token }: HomeProps) => {
       </div>
 
       {/* Full table */}
-      <TransactionTable transactions={transactions} onEdit={setEditing} />
+      <TransactionTable
+        transactions={transactions}
+        checkpoints={cp.checkpoints}
+        onEdit={setEditing}
+        onAddCheckpoint={() => setPinModal("new")}
+        onEditCheckpoint={setPinModal}
+      />
 
       {/* Mobile floating action button */}
       <button
@@ -115,7 +158,17 @@ const Home = ({ token }: HomeProps) => {
           initialType={modalType}
           existingCategories={existingCategories}
           onClose={() => setModalType(null)}
-          onCreated={refetch}
+          onCreated={refetchAll}
+        />
+      )}
+
+      {pinModal && (
+        <BalanceModal
+          token={token}
+          transactions={transactions}
+          checkpoint={pinModal === "new" ? undefined : pinModal}
+          onClose={() => setPinModal(null)}
+          onSaved={refetchAll}
         />
       )}
 
@@ -125,7 +178,7 @@ const Home = ({ token }: HomeProps) => {
           transaction={editing}
           existingCategories={existingCategories}
           onClose={() => setEditing(null)}
-          onCreated={refetch}
+          onCreated={refetchAll}
         />
       )}
     </div>

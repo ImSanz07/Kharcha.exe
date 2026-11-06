@@ -19,14 +19,14 @@ const extractError = (body: unknown): string => {
     });
     if (parts.length) return parts.join(" ");
   }
-  return "Could not save the transaction.";
+  return "Something went wrong. Please try again.";
 };
 
-const request = async (
+export const request = async (
   token: string,
   url: string,
   method: "POST" | "PATCH" | "DELETE",
-  payload?: NewTransactionPayload,
+  payload?: object,
 ): Promise<void> => {
   const res = await fetch(url, {
     method,
