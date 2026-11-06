@@ -12,7 +12,8 @@ import TopCategories from "../../components/home/TopCategories";
 import TransactionTable from "../../components/home/TransactionTable";
 import "../../styles/dashboard.css";
 import LoadingScreen from "../../components/home/LoadingScreen";
-import AddTransactionModal from "../../components/home/AddTransactionModal";
+import TransactionModal from "../../components/home/TransactionModal";
+import type { Transaction } from "../../types/transaction";
 import type { NewTransactionType } from "../../utils/transactions/api";
 
 // Hardcoded for now — swap with auth context later
@@ -27,6 +28,7 @@ const Home = ({ token }: HomeProps) => {
   const { transactions, loading, error, refetch } = useTransactions(token);
 
   const [modalType, setModalType] = useState<NewTransactionType | null>(null);
+  const [editing, setEditing] = useState<Transaction | null>(null);
 
   // Full-screen loader only for the very first load; later refetches keep the page mounted
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -96,7 +98,7 @@ const Home = ({ token }: HomeProps) => {
       </div>
 
       {/* Full table */}
-      <TransactionTable transactions={transactions} />
+      <TransactionTable transactions={transactions} onEdit={setEditing} />
 
       {/* Mobile floating action button */}
       <button
@@ -108,11 +110,21 @@ const Home = ({ token }: HomeProps) => {
       </button>
 
       {modalType && (
-        <AddTransactionModal
+        <TransactionModal
           token={token}
           initialType={modalType}
           existingCategories={existingCategories}
           onClose={() => setModalType(null)}
+          onCreated={refetch}
+        />
+      )}
+
+      {editing && (
+        <TransactionModal
+          token={token}
+          transaction={editing}
+          existingCategories={existingCategories}
+          onClose={() => setEditing(null)}
           onCreated={refetch}
         />
       )}

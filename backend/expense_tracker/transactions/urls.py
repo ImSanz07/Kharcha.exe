@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import BulkSMSIngestView, TransactionListCreateView
+from .views import BulkSMSIngestView, TransactionListCreateView, TransactionDetailView
 
 urlpatterns = [
     path(
@@ -11,5 +11,10 @@ urlpatterns = [
         'transactions/',
         TransactionListCreateView.as_view(),
         name='transactions'
+    ),
+    path(
+        'transactions/<int:pk>/',
+        TransactionDetailView.as_view(),
+        name='transaction-detail'
     ),
 ]

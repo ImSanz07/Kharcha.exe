@@ -47,6 +47,7 @@ const normalizeTransaction = (value: unknown): Transaction => {
     category_name: value.category_name,
     transaction_date:
       typeof value.transaction_date === "string" ? value.transaction_date : null,
+    source: value.source === "SMS" ? "SMS" : "MANUAL",
     created_at: value.created_at,
   };
 };
