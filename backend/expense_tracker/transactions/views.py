@@ -2,6 +2,8 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
+from django.shortcuts import get_object_or_404
 
 from .domain.services.rule_engine.engine import SmsParserRuleEngine
 from .domain.services.transaction_service import Transaction_Service
@@ -63,3 +65,40 @@ class TransactionListCreateView(generics.GenericAPIView):
             self.serializer_class(transaction).data,
             status=status.HTTP_201_CREATED
         )
+
+
+class TransactionDetailView(generics.GenericAPIView):
+    """
+    PATCH /api/transactions/<id>/  edit a manual transaction
+    DELETE /api/transactions/<id>/ delete a manual transaction
+    SMS imported transactions are read only, otherwise re-ingesting would recreate them.
+    """
+    serializer_class = TransactionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Scoped to the logged-in user, so other users' ids return 404
+        return Transaction_Service.get_all_transactions(self.request.user)
+
+    def get_manual_transaction(self, pk):
+        transaction = get_object_or_404(self.get_queryset(), pk=pk)
+        if transaction.source != 'MANUAL':
+            raise PermissionDenied("Only manually added transactions can be changed.")
+        return transaction
+
+    def patch(self, request, pk):
+        transaction = self.get_manual_transaction(pk)
+        serializer = self.serializer_class(
+            transaction, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        transaction = serializer.save()
+        return Response(
+            self.serializer_class(transaction).data,
+            status=status.HTTP_200_OK
+        )
+
+    def delete(self, request, pk):
+        transaction = self.get_manual_transaction(pk)
+        transaction.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

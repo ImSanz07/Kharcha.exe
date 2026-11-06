@@ -21,8 +21,10 @@ class TransactionSerializer(serializers.ModelSerializer):
             'category',       # input
             'category_name',  # output
             'transaction_date',
+            'source',
             'created_at'
         ]
+        read_only_fields = ['source']
         extra_kwargs = {
             # Optional on input; defaults to today in create()
             'transaction_date': {'required': False, 'allow_null': True},
@@ -73,3 +75,17 @@ class TransactionSerializer(serializers.ModelSerializer):
             **validated_data
         )
         return transaction
+
+    def update(self, instance, validated_data):
+        """
+        Handles partial edits. Category is normalized the same way as on create.
+        """
+        category_str = validated_data.pop('category', None)
+        if category_str is not None:
+            instance.category = Category_Service.create_category_if_not_present(
+                category_str.strip().lower()
+            )
+        # An explicit null date means keep the existing one
+        if validated_data.get('transaction_date', 0) is None:
+            validated_data.pop('transaction_date')
+        return super().update(instance, validated_data)
