@@ -45,6 +45,8 @@ const normalizeTransaction = (value: unknown): Transaction => {
     amount: String(value.amount),
     transaction_type: transactionType,
     category_name: value.category_name,
+    transaction_date:
+      typeof value.transaction_date === "string" ? value.transaction_date : null,
     created_at: value.created_at,
   };
 };
@@ -68,13 +70,13 @@ export const useTransactions = (token: string): UseTransactionsResult => {
         const res = await fetch(API_URL, {
           signal: controller.signal,
           headers: {
-            Authorization: `Token ${ token } `,
+            Authorization: `Token ${token}`,
             "Content-Type": "application/json",
           },
         });
 
         if (!res.ok) {
-          throw new Error(`HTTP ${ res.status } `);
+          throw new Error(`HTTP ${res.status}`);
         }
 
         const data: unknown = await res.json();

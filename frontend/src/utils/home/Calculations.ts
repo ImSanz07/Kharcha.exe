@@ -54,7 +54,7 @@ export const getDailySpend = (
   transactions
     .filter((t) => t.transaction_type === "debit")
     .forEach((t) => {
-      const date = t.created_at.split("T")[0];
+      const date = t.transaction_date ?? t.created_at.split("T")[0];
       map[date] = (map[date] || 0) + parseFloat(t.amount);
     });
 
