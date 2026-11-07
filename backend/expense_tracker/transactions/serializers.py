@@ -98,12 +98,17 @@ class BalanceCheckpointSerializer(serializers.ModelSerializer):
     after_transaction_id = serializers.IntegerField(
         required=False, allow_null=True, min_value=0
     )
-    # Input: only used for an opening balance on an account with no transactions.
+    # Input: true = balance before all history (every transaction counts).
+    is_opening = serializers.BooleanField(required=False)
+    # Input: only used when there is no transaction to place the pin after.
     as_of_date = serializers.DateField(required=False)
 
     class Meta:
         model = BalanceCheckpoint
-        fields = ['id', 'amount', 'as_of_date', 'after_transaction_id', 'created_at']
+        fields = [
+            'id', 'amount', 'as_of_date', 'after_transaction_id',
+            'is_opening', 'created_at',
+        ]
 
     def _resolve(self, user, validated_data):
         try:
@@ -111,24 +116,27 @@ class BalanceCheckpointSerializer(serializers.ModelSerializer):
                 user,
                 validated_data.pop('after_transaction_id', None),
                 validated_data.pop('as_of_date', None),
+                validated_data.pop('is_opening', False),
             )
         except ValueError as exc:
             raise serializers.ValidationError({'after_transaction_id': str(exc)})
 
     def create(self, validated_data):
         user = self.context['request'].user
-        as_of_date, after_id = self._resolve(user, validated_data)
+        as_of_date, after_id, is_opening = self._resolve(user, validated_data)
         return BalanceCheckpoint.objects.create(
             user=user,
             as_of_date=as_of_date,
             after_transaction_id=after_id,
+            is_opening=is_opening,
             **validated_data
         )
 
     def update(self, instance, validated_data):
         # Only move the pin if the client actually sent a position
-        if 'after_transaction_id' in validated_data or 'as_of_date' in validated_data:
-            instance.as_of_date, instance.after_transaction_id = self._resolve(
-                instance.user, validated_data
-            )
+        if any(k in validated_data for k in
+               ('after_transaction_id', 'as_of_date', 'is_opening')):
+            (instance.as_of_date,
+             instance.after_transaction_id,
+             instance.is_opening) = self._resolve(instance.user, validated_data)
         return super().update(instance, validated_data)

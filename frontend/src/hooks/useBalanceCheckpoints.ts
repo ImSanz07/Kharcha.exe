@@ -25,6 +25,7 @@ const normalize = (value: unknown): BalanceCheckpoint => {
     amount: String(v.amount),
     as_of_date: v.as_of_date,
     after_transaction_id: v.after_transaction_id as number,
+    is_opening: v.is_opening === true,
     created_at: typeof v.created_at === "string" ? v.created_at : "",
   };
 };

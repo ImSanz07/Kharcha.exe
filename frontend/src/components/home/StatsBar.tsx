@@ -8,6 +8,8 @@ interface StatsBarProps {
   txCount: number;
   /** Small text under the balance, e.g. when it was last pinned. */
   balanceNote?: string;
+  /** Card title. "Bank Balance" once the user has pinned a balance. */
+  balanceLabel?: string;
 }
 
 const StatCard = ({
@@ -35,10 +37,10 @@ const StatCard = ({
   </div>
 );
 
-const StatsBar = ({ balance, totalDebits, totalCredits, txCount, balanceNote }: StatsBarProps) => (
+const StatsBar = ({ balance, totalDebits, totalCredits, txCount, balanceNote, balanceLabel }: StatsBarProps) => (
   <div className="stats-bar">
     <StatCard
-      label="Net Balance"
+      label={balanceLabel ?? "Net Balance"}
       value={`${balance < 0 ? "−" : ""}${formatCurrency(Math.abs(balance))}`}
       icon={Wallet}
       accent={balance >= 0 ? "#34d399" : "#f87171"}

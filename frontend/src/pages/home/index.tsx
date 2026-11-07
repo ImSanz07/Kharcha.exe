@@ -17,7 +17,6 @@ import "../../styles/dashboard.css";
 import LoadingScreen from "../../components/home/LoadingScreen";
 import TransactionModal from "../../components/home/TransactionModal";
 import BalanceModal from "../../components/home/BalanceModal";
-import OnboardingBalance from "../../components/home/OnboardingBalance";
 import type { Transaction } from "../../types/transaction";
 import type { NewTransactionType } from "../../utils/transactions/api";
 
@@ -38,6 +37,15 @@ const Home = ({ token }: HomeProps) => {
   // "new" opens the pin popup empty, a checkpoint opens it for editing
   const [pinModal, setPinModal] = useState<"new" | BalanceCheckpoint | null>(null);
 
+  const promptKey = `balancePromptDismissed:${token.slice(-8)}`;
+  const [promptDismissed, setPromptDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(promptKey) === "1";
+    } catch {
+      return false;
+    }
+  });
+
   // Full-screen loader only for the very first load; later refetches keep the page mounted
   const [hasLoaded, setHasLoaded] = useState(false);
   const busy = loading || cp.loading;
@@ -57,13 +65,18 @@ const Home = ({ token }: HomeProps) => {
     cp.refetch();
   };
 
-  // A brand new account must set a starting balance before anything else.
-  // Skipped if either request failed, so an outage can never trap the user here.
-  const isFreshAccount =
-    !error && !cp.error && transactions.length === 0 && cp.checkpoints.length === 0;
-  if (isFreshAccount) return <OnboardingBalance token={token} onDone={refetchAll} />;
+  // The bank balance is optional: just a dismissible suggestion until the user adds one
+  const showBalancePrompt =
+    !cp.error && cp.checkpoints.length === 0 && !promptDismissed;
 
-  const missingBalance = !cp.error && cp.checkpoints.length === 0;
+  const dismissBalancePrompt = () => {
+    setPromptDismissed(true);
+    try {
+      localStorage.setItem(promptKey, "1");
+    } catch {
+      /* storage unavailable, the prompt just comes back next visit */
+    }
+  };
 
   const { balance, anchor } = getAnchoredBalance(transactions, cp.checkpoints);
   const totalDebits = getTotalDebits(transactions);
@@ -105,13 +118,21 @@ const Home = ({ token }: HomeProps) => {
         </div>
       )}
 
-      {missingBalance && (
+      {showBalancePrompt && (
         <div className="balance-banner">
-          <span>Your balance isn&apos;t set, so the total below only reflects these transactions.</span>
-          <button type="button" className="pin-btn" onClick={() => setPinModal("new")}>
-            <Pin size={12} />
-            <span>Set balance</span>
-          </button>
+          <span>
+            Optional: add your bank balance to see your real balance, kept up to date as
+            you add transactions.
+          </span>
+          <div className="balance-banner-actions">
+            <button type="button" className="pin-btn" onClick={() => setPinModal("new")}>
+              <Pin size={12} />
+              <span>Add balance</span>
+            </button>
+            <button type="button" className="banner-dismiss" onClick={dismissBalancePrompt}>
+              Not now
+            </button>
+          </div>
         </div>
       )}
 
@@ -121,10 +142,13 @@ const Home = ({ token }: HomeProps) => {
         totalDebits={totalDebits}
         totalCredits={totalCredits}
         txCount={debitCount}
+        balanceLabel={anchor ? "Bank Balance" : "Net Balance"}
         balanceNote={
           anchor
-            ? `pinned ${formatDate(`${anchor.as_of_date}T00:00:00`)}`
-            : "balance not set"
+            ? anchor.is_opening
+              ? "from your starting balance"
+              : `pinned ${formatDate(`${anchor.as_of_date}T00:00:00`)}`
+            : "income minus expenses"
         }
       />
 
