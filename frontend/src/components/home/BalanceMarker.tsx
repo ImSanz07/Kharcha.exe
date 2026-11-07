@@ -1,4 +1,4 @@
-import { Pin } from "lucide-react";
+import { Pin, TriangleAlert } from "lucide-react";
 import type { BalanceCheckpoint } from "../../types/balance";
 import { formatCurrency, formatDate } from "../../utils/home/Calculations";
 
@@ -6,11 +6,13 @@ interface BalanceMarkerProps {
   checkpoint: BalanceCheckpoint;
   /** The newest pin: the balance is counted forward from it. */
   isAnchor: boolean;
+  /** Pin amount minus what the previous pin plus transactions would give. */
+  discrepancy?: number;
   onClick: (checkpoint: BalanceCheckpoint) => void;
 }
 
 /** A pin dropped in the transaction list: "your balance was X right here". */
-const BalanceMarker = ({ checkpoint, isAnchor, onClick }: BalanceMarkerProps) => {
+const BalanceMarker = ({ checkpoint, isAnchor, discrepancy, onClick }: BalanceMarkerProps) => {
   const amount = parseFloat(checkpoint.amount);
   const label = `${amount < 0 ? "−" : ""}${formatCurrency(Math.abs(amount))}`;
 
@@ -34,6 +36,17 @@ const BalanceMarker = ({ checkpoint, isAnchor, onClick }: BalanceMarkerProps) =>
         </span>
       </span>
       <span className="cp-line" aria-hidden="true" />
+      {discrepancy !== undefined && (
+        <span
+          className="cp-warn"
+          title="Your pinned balance and your transactions since the previous pin don't match. Something may be missing, like a cash spend or an untracked deposit."
+        >
+          <TriangleAlert size={11} />
+          {discrepancy < 0
+            ? `${formatCurrency(Math.abs(discrepancy))} less than your transactions explain`
+            : `${formatCurrency(discrepancy)} more than your transactions explain`}
+        </span>
+      )}
       <span className="cp-caption">
         {checkpoint.is_opening
           ? "Start of history"
