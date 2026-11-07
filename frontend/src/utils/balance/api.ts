@@ -2,9 +2,11 @@ import { request } from "../transactions/api";
 
 export interface CheckpointPayload {
   amount: string; // decimal string, may be negative
-  /** Pin goes right after this transaction. null means opening balance (before all). */
+  /** Pin goes right after this transaction. */
   after_transaction_id?: number | null;
-  /** Only used by the server for an opening balance on an account with no transactions. */
+  /** Balance before all history. Every transaction counts, even older ones added later. */
+  is_opening?: boolean;
+  /** Only used when there is no transaction to place the pin after. */
   as_of_date?: string;
 }
 

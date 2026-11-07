@@ -27,13 +27,17 @@ const BalanceMarker = ({ checkpoint, isAnchor, onClick }: BalanceMarkerProps) =>
           <Pin size={12} />
         </span>
         <span className="cp-text">
-          <span className="cp-kicker">Balance here</span>
+          <span className="cp-kicker">
+            {checkpoint.is_opening ? "Starting balance" : "Balance here"}
+          </span>
           <span className={`cp-amount ${amount < 0 ? "cp-negative" : ""}`}>{label}</span>
         </span>
       </span>
       <span className="cp-line" aria-hidden="true" />
       <span className="cp-caption">
-        {formatDate(`${checkpoint.as_of_date}T00:00:00`)}
+        {checkpoint.is_opening
+          ? "Start of history"
+          : formatDate(`${checkpoint.as_of_date}T00:00:00`)}
         {isAnchor ? " · counted from here" : ""}
       </span>
     </button>

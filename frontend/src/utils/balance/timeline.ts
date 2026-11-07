@@ -5,7 +5,9 @@ import type { BalanceCheckpoint } from "../../types/balance";
  * Timeline order. Everything (transactions and balance pins) gets a sort key
  * [date, id, kind]. A pin placed "after transaction N" gets [date, N, 1], so it
  * sorts right after that transaction. A pin with id 0 sorts before every
- * transaction of its date. This mirrors BalanceCheckpoint on the backend.
+ * transaction of its date. A starting-balance pin (is_opening) sorts before all
+ * of history, so every transaction counts. This mirrors BalanceCheckpoint on
+ * the backend.
  */
 type Key = [string, number, number];
 
@@ -13,7 +15,8 @@ export const effectiveDate = (t: Transaction): string =>
   t.transaction_date ?? t.created_at.split("T")[0];
 
 const txKey = (t: Transaction): Key => [effectiveDate(t), t.transaction_id, 0];
-const cpKey = (c: BalanceCheckpoint): Key => [c.as_of_date, c.after_transaction_id, 1];
+const cpKey = (c: BalanceCheckpoint): Key =>
+  c.is_opening ? ["", 0, 1] : [c.as_of_date, c.after_transaction_id, 1];
 
 const compareKeys = (a: Key, b: Key): number =>
   a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : a[1] - b[1] || a[2] - b[2];

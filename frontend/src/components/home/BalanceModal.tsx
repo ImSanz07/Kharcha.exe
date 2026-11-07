@@ -6,6 +6,7 @@ import {
   createCheckpoint,
   updateCheckpoint,
   deleteCheckpoint,
+  type CheckpointPayload,
 } from "../../utils/balance/api";
 import { slotIndexFor, sortTransactionsNewestFirst } from "../../utils/balance/timeline";
 import { formatCurrency, formatDate } from "../../utils/home/Calculations";
@@ -22,15 +23,33 @@ interface BalanceModalProps {
 const AMOUNT_RE = /^\d+(\.\d{1,2})?$/;
 const todayLocal = () => new Date().toLocaleDateString("en-CA");
 
+type Slot =
+  | { kind: "after"; id: number } // right after this transaction
+  | { kind: "now" } // right now, on an account with no transactions yet
+  | { kind: "opening" }; // before all history: every transaction counts
+
 /**
  * Pick where in the timeline the balance sits by tapping the gap between two
- * transactions. Slot k is the gap just above transactions[k]; the last slot is
- * below all of them (an opening balance).
+ * transactions. Slot k is the gap just above transactions[k]. The last slot is
+ * the start of history (a starting balance).
  */
 const BalanceModal = ({ token, transactions, checkpoint, onClose, onSaved }: BalanceModalProps) => {
   const isEdit = !!checkpoint;
   const sorted = useMemo(() => sortTransactionsNewestFirst(transactions), [transactions]);
-  const initialSlot = checkpoint ? slotIndexFor(sorted, checkpoint) : 0;
+  const slots: Slot[] = useMemo(
+    () => [
+      ...sorted.map((t): Slot => ({ kind: "after", id: t.transaction_id })),
+      ...(sorted.length === 0 ? [{ kind: "now" } as Slot] : []),
+      { kind: "opening" },
+    ],
+    [sorted],
+  );
+  const openingIndex = slots.length - 1;
+  const initialSlot = !checkpoint
+    ? 0
+    : checkpoint.is_opening
+      ? openingIndex
+      : slotIndexFor(sorted, checkpoint);
 
   const initialAmount = checkpoint ? parseFloat(checkpoint.amount) : 0;
   const [amount, setAmount] = useState(checkpoint ? String(Math.abs(initialAmount)) : "");
@@ -65,7 +84,17 @@ const BalanceModal = ({ token, transactions, checkpoint, onClose, onSaved }: Bal
       ? "your balance"
       : `${negative && previewValue > 0 ? "−" : ""}${formatCurrency(previewValue)}`;
 
-  const slotId = (k: number) => (k < sorted.length ? sorted[k].transaction_id : null);
+  /** What to send to the server for the chosen slot. */
+  const positionFor = (k: number): Omit<CheckpointPayload, "amount"> => {
+    const chosen = slots[k];
+    if (chosen.kind === "after") {
+      return { after_transaction_id: chosen.id, is_opening: false };
+    }
+    if (chosen.kind === "opening") {
+      return { after_transaction_id: null, is_opening: true };
+    }
+    return { after_transaction_id: null, is_opening: false };
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,12 +111,12 @@ const BalanceModal = ({ token, transactions, checkpoint, onClose, onSaved }: Bal
         await updateCheckpoint(token, checkpoint.id, {
           amount: value,
           // Only move the pin if the user picked a different slot
-          ...(slot !== initialSlot && { after_transaction_id: slotId(slot) }),
+          ...(slot !== initialSlot && { ...positionFor(slot), as_of_date: todayLocal() }),
         });
       } else {
         await createCheckpoint(token, {
           amount: value,
-          after_transaction_id: slotId(slot),
+          ...positionFor(slot),
           as_of_date: todayLocal(),
         });
       }
@@ -116,12 +145,15 @@ const BalanceModal = ({ token, transactions, checkpoint, onClose, onSaved }: Bal
 
   const renderSlot = (k: number) => {
     const selected = slot === k;
+    const kind = slots[k].kind;
     const hint =
-      k === 0 && sorted.length > 0
-        ? "Now"
-        : k === sorted.length && sorted.length > 0
-          ? "Before everything"
-          : "Drop it here";
+      kind === "opening"
+        ? "Start of history"
+        : kind === "now"
+          ? "Right now"
+          : k === 0
+            ? "Now"
+            : "Drop it here";
     return (
       <button
         key={`slot-${k}`}
@@ -155,7 +187,7 @@ const BalanceModal = ({ token, transactions, checkpoint, onClose, onSaved }: Bal
         <div className="modal-grabber" aria-hidden="true" />
         <div className="modal-head">
           <h2 id="balance-title" className="modal-title">
-            {isEdit ? "Edit balance pin" : "Pin your balance"}
+            {isEdit ? "Edit balance pin" : "Pin your bank balance"}
           </h2>
           <button type="button" className="modal-close" onClick={onClose} disabled={submitting} aria-label="Close">
             <X size={18} />
@@ -164,8 +196,8 @@ const BalanceModal = ({ token, transactions, checkpoint, onClose, onSaved }: Bal
 
         <form onSubmit={handleSave} noValidate>
           <p className="modal-help">
-            Enter what your balance was, then tap the gap in your history where it belongs.
-            Your balance is counted forward from the latest pin.
+            Optional. Enter what your bank balance was, then tap the gap in your history
+            where it belongs. Your balance is counted forward from the latest pin.
           </p>
 
           {error && <div className="modal-error" role="alert">{error}</div>}
@@ -209,11 +241,16 @@ const BalanceModal = ({ token, transactions, checkpoint, onClose, onSaved }: Bal
                 </div>
               </div>
             ))}
-            {renderSlot(sorted.length)}
-            {sorted.length === 0 && (
-              <p className="slot-empty">No transactions yet, so this will be your opening balance.</p>
-            )}
+            {sorted.length === 0 && renderSlot(0)}
+            {renderSlot(openingIndex)}
           </div>
+          <p className="slot-note">
+            {slots[slot].kind === "opening"
+              ? "Your balance before your first transaction. Everything you add or import counts from here, even older entries."
+              : slots[slot].kind === "now"
+                ? "Your balance as of today. Older entries you add later are treated as already included."
+                : "Your balance at this exact point. Earlier transactions are treated as already included."}
+          </p>
 
           <button
             type="submit"
