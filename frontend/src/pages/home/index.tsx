@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw, AlertCircle, Landmark, Pin, Plus } from "lucide-react";
+import { RefreshCw, AlertCircle, Landmark, Pin, Plus, TriangleAlert } from "lucide-react";
 import { useTransactions } from "../../hooks/useTransactions";
 import { useBalanceCheckpoints } from "../../hooks/useBalanceCheckpoints";
-import { getAnchoredBalance } from "../../utils/balance/timeline";
+import {
+  findLateImports,
+  getAnchoredBalance,
+  getCountedTransactions,
+} from "../../utils/balance/timeline";
+import { updateCheckpoint } from "../../utils/balance/api";
+import { readFlag, writeFlag } from "../../utils/storage";
 import type { BalanceCheckpoint } from "../../types/balance";
 import {
+  formatCurrency,
   formatDate,
   getTotalDebits,
   getTotalCredits,
@@ -46,6 +53,17 @@ const Home = ({ token }: HomeProps) => {
     }
   });
 
+  // "Since pin" shows only activity that counts toward the balance, so the cards add up
+  const [scope, setScope] = useState<"since" | "all">("since");
+  const [reviewDismissed, setReviewDismissed] = useState<string[]>([]);
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+
+  const lateImports = useMemo(
+    () => findLateImports(transactions, cp.checkpoints),
+    [transactions, cp.checkpoints],
+  );
+
   // Full-screen loader only for the very first load; later refetches keep the page mounted
   const [hasLoaded, setHasLoaded] = useState(false);
   const busy = loading || cp.loading;
@@ -79,11 +97,43 @@ const Home = ({ token }: HomeProps) => {
   };
 
   const { balance, anchor } = getAnchoredBalance(transactions, cp.checkpoints);
-  const totalDebits = getTotalDebits(transactions);
-  const totalCredits = getTotalCredits(transactions);
-  const debitCount = transactions.filter(
-    (t) => t.transaction_type === "debit",
-  ).length;
+  const counted = getCountedTransactions(transactions, cp.checkpoints);
+  const hasHistoryBeforePin = counted.length < transactions.length;
+  const shown = anchor && hasHistoryBeforePin && scope === "since" ? counted : transactions;
+  const totalDebits = getTotalDebits(shown);
+  const totalCredits = getTotalCredits(shown);
+  const debitCount = shown.filter((t) => t.transaction_type === "debit").length;
+
+  const reviewKey = lateImports
+    ? `balanceImportReview:${lateImports.anchor.id}:${lateImports.maxId}`
+    : null;
+  const showReview =
+    lateImports && reviewKey && !reviewDismissed.includes(reviewKey) && !readFlag(reviewKey);
+
+  const dismissReview = () => {
+    if (!reviewKey) return;
+    setReviewDismissed((keys) => [...keys, reviewKey]);
+    writeFlag(reviewKey);
+  };
+
+  // "Already included": move the pin to sit after the late imports, same amount
+  const markLateImportsIncluded = async () => {
+    if (!lateImports) return;
+    try {
+      setReviewBusy(true);
+      setReviewError(null);
+      await updateCheckpoint(token, lateImports.anchor.id, {
+        amount: lateImports.anchor.amount,
+        after_transaction_id: lateImports.maxId,
+        is_opening: false,
+      });
+      refetchAll();
+    } catch (err) {
+      setReviewError(err instanceof Error ? err.message : "Could not update the pin.");
+    } finally {
+      setReviewBusy(false);
+    }
+  };
 
   return (
     <div className="dashboard">
@@ -136,6 +186,64 @@ const Home = ({ token }: HomeProps) => {
         </div>
       )}
 
+      {showReview && lateImports && (
+        <div className="balance-banner balance-banner-warn" role="alert">
+          <div className="banner-body">
+            <span className="banner-title">
+              <TriangleAlert size={13} />
+              {lateImports.candidates.length === 1
+                ? "1 SMS transaction was imported after your balance pin"
+                : `${lateImports.candidates.length} SMS transactions were imported after your balance pin`}
+            </span>
+            <span>
+              They are dated {formatDate(`${lateImports.anchor.as_of_date}T00:00:00`)}, the same day as
+              your pin, so we can&apos;t tell if they happened before it. If they did, they&apos;re
+              counted twice (currently {lateImports.impact < 0 ? "−" : "+"}
+              {formatCurrency(Math.abs(lateImports.impact))} on your balance).
+              {lateImports.swallowed.length > 0 &&
+                ` Marking them included also covers ${lateImports.swallowed.length} other ${lateImports.swallowed.length === 1 ? "entry" : "entries"} from that day.`}
+            </span>
+            {reviewError && <span className="banner-error">{reviewError}</span>}
+          </div>
+          <div className="balance-banner-actions">
+            <button type="button" className="pin-btn" onClick={markLateImportsIncluded} disabled={reviewBusy}>
+              {reviewBusy ? "Saving…" : "Already included"}
+            </button>
+            <button type="button" className="banner-dismiss" onClick={dismissReview} disabled={reviewBusy}>
+              Count them
+            </button>
+          </div>
+        </div>
+      )}
+
+      {anchor && hasHistoryBeforePin && (
+        <div className="scope-bar">
+          <span>
+            {scope === "since"
+              ? `Cards and charts show activity since your ${formatDate(`${anchor.as_of_date}T00:00:00`)} pin`
+              : "Cards and charts show all history"}
+          </span>
+          <div className="scope-toggle" role="group" aria-label="Summary period">
+            <button
+              type="button"
+              className={`scope-btn ${scope === "since" ? "scope-btn-active" : ""}`}
+              aria-pressed={scope === "since"}
+              onClick={() => setScope("since")}
+            >
+              Since pin
+            </button>
+            <button
+              type="button"
+              className={`scope-btn ${scope === "all" ? "scope-btn-active" : ""}`}
+              aria-pressed={scope === "all"}
+              onClick={() => setScope("all")}
+            >
+              All time
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
       <StatsBar
         balance={balance}
@@ -154,8 +262,8 @@ const Home = ({ token }: HomeProps) => {
 
       {/* Charts row */}
       <div className="charts-row">
-        <SpendChart transactions={transactions} />
-        <TopCategories transactions={transactions} />
+        <SpendChart transactions={shown} />
+        <TopCategories transactions={shown} />
       </div>
 
       {/* Full table */}

@@ -5,6 +5,7 @@ import { formatCurrency, formatDate, formatTime } from "../../utils/home/Calcula
 import {
   buildTimeline,
   getAnchor,
+  getPinDiscrepancies,
   isBeforeAnchor,
   type TimelineItem,
 } from "../../utils/balance/timeline";
@@ -40,6 +41,10 @@ const TransactionTable = ({
   // Balance pins only make sense in the full, unfiltered history
   const showPins = filter === "all" && search.trim() === "";
   const anchor = useMemo(() => getAnchor(checkpoints), [checkpoints]);
+  const discrepancies = useMemo(
+    () => getPinDiscrepancies(transactions, checkpoints),
+    [transactions, checkpoints],
+  );
   const items: TimelineItem[] = useMemo(
     () => buildTimeline(filtered, showPins ? checkpoints : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -148,6 +153,7 @@ const TransactionTable = ({
               key={`p-${item.checkpoint.id}`}
               checkpoint={item.checkpoint}
               isAnchor={item.isAnchor}
+              discrepancy={discrepancies.get(item.checkpoint.id)}
               onClick={onEditCheckpoint}
             />
           ),
