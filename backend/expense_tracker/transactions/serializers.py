@@ -3,6 +3,8 @@ from django.utils import timezone
 from rest_framework import serializers
 from .domain.models.transaction import Transaction
 from .domain.models.category import Category
+from .domain.models.balance_checkpoint import BalanceCheckpoint
+from .domain.services.balance_service import Balance_Service
 from .domain.services.category_service import Category_Service
 
 class TransactionSerializer(serializers.ModelSerializer):
@@ -88,4 +90,45 @@ class TransactionSerializer(serializers.ModelSerializer):
         # An explicit null date means keep the existing one
         if validated_data.get('transaction_date', 0) is None:
             validated_data.pop('transaction_date')
+        return super().update(instance, validated_data)
+
+
+class BalanceCheckpointSerializer(serializers.ModelSerializer):
+    # Input: place the pin right after this transaction. Null/0 = opening balance.
+    after_transaction_id = serializers.IntegerField(
+        required=False, allow_null=True, min_value=0
+    )
+    # Input: only used for an opening balance on an account with no transactions.
+    as_of_date = serializers.DateField(required=False)
+
+    class Meta:
+        model = BalanceCheckpoint
+        fields = ['id', 'amount', 'as_of_date', 'after_transaction_id', 'created_at']
+
+    def _resolve(self, user, validated_data):
+        try:
+            return Balance_Service.resolve_position(
+                user,
+                validated_data.pop('after_transaction_id', None),
+                validated_data.pop('as_of_date', None),
+            )
+        except ValueError as exc:
+            raise serializers.ValidationError({'after_transaction_id': str(exc)})
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        as_of_date, after_id = self._resolve(user, validated_data)
+        return BalanceCheckpoint.objects.create(
+            user=user,
+            as_of_date=as_of_date,
+            after_transaction_id=after_id,
+            **validated_data
+        )
+
+    def update(self, instance, validated_data):
+        # Only move the pin if the client actually sent a position
+        if 'after_transaction_id' in validated_data or 'as_of_date' in validated_data:
+            instance.as_of_date, instance.after_transaction_id = self._resolve(
+                instance.user, validated_data
+            )
         return super().update(instance, validated_data)

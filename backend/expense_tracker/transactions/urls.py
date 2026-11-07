@@ -1,5 +1,6 @@
 from django.urls import path
-from .views import BulkSMSIngestView, TransactionListCreateView, TransactionDetailView
+from .views import BulkSMSIngestView, TransactionListCreateView, TransactionDetailView,\
+    BalanceCheckpointListCreateView, BalanceCheckpointDetailView
 
 urlpatterns = [
     path(
@@ -16,5 +17,15 @@ urlpatterns = [
         'transactions/<int:pk>/',
         TransactionDetailView.as_view(),
         name='transaction-detail'
+    ),
+    path(
+        'balance-checkpoints/',
+        BalanceCheckpointListCreateView.as_view(),
+        name='balance-checkpoints'
+    ),
+    path(
+        'balance-checkpoints/<int:pk>/',
+        BalanceCheckpointDetailView.as_view(),
+        name='balance-checkpoint-detail'
     ),
 ]
